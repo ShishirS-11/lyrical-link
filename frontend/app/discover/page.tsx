@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, Check, ChevronRight, Loader2, Sparkles } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import TrackCard from "../../components/TrackCard";
@@ -22,6 +22,10 @@ export default function DiscoverPage() {
   const [playing, setPlaying] = useState(false);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
+  useEffect(() => {
+    return () => streamRef.current?.getTracks().forEach(track => track.stop());
+  }, []);
+
   async function startCamera() {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     streamRef.current = stream;
@@ -38,12 +42,15 @@ export default function DiscoverPage() {
     canvas.width = videoRef.current.videoWidth || 640;
     canvas.height = videoRef.current.videoHeight || 480;
     canvas.getContext("2d")?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error("Could not capture image")), "image/jpeg", .9));
+    const blob = await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error("Could not capture image")), "image/jpeg", .9)
+    );
 
     try {
       const result = await detectEmotion(blob);
       setEmotion(result.emotion);
       setConfidence(result.confidence);
+      setAnswers({});
       const next = await getNextQuestion(result.emotion, result.confidence, {});
       setQuestion(next.question);
     } finally {
