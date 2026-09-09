@@ -16,11 +16,13 @@ def _get_classifier():
     return _classifier
 
 
-def detect_emotion(image_bytes: bytes):
+def detect_and_classify(image_bytes: bytes):
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
-    faces = _face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(80, 80))
+    faces = _face_cascade.detectMultiScale(
+        gray, scaleFactor=1.1, minNeighbors=5, minSize=(80, 80)
+    )
     if len(faces) == 0:
         raise ValueError("No face detected")
 
@@ -28,7 +30,12 @@ def detect_emotion(image_bytes: bytes):
     face = image.crop((x, y, x + w, y + h))
     results = _get_classifier()(face)
     best = max(results, key=lambda item: item["score"])
+    probabilities = {
+        str(item["label"]).lower(): float(item["score"])
+        for item in results
+    }
     return {
-        "emotion": best["label"].lower(),
+        "emotion": str(best["label"]).lower(),
         "confidence": float(best["score"]),
+        "probabilities": probabilities,
     }
